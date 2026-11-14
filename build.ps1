@@ -29,5 +29,5 @@ static class BuildInfo { public const string Version = "$Version"; }
     "$root\host\Program.cs" $info
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }
 
-Set-Content -Encoding ASCII -NoNewline (Join-Path $dist "version.txt") $Version
+[IO.File]::WriteAllText((Join-Path $dist "version.txt"), $Version)
 Write-Host "Built dist\Inventory.exe ($Version)"
