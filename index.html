@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory &amp; Sales</title>
+<style>
+  :root {
+    --bg: #f3f5f7; --card: #fff; --ink: #1c2530; --muted: #66727f; --line: #dde3e9;
+    --accent: #0f6e6a; --accent-ink: #fff; --accent-soft: #e3f2f1;
+    --bad: #b42318; --bad-soft: #fdecea; --good: #18794e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 "Segoe UI", Tahoma, Arial, sans-serif; }
+  header { background: var(--accent); color: var(--accent-ink); padding: 12px 20px 0; }
+  .top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; flex: 1; }
+  #lang { background: rgba(255,255,255,.15); color: inherit; border: 1px solid rgba(255,255,255,.4); border-radius: 8px; padding: 4px 14px; cursor: pointer; }
+  #lang:hover { background: rgba(255,255,255,.28); }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav button { background: transparent; color: inherit; border: 0; padding: 9px 16px; font: inherit; cursor: pointer; border-radius: 8px 8px 0 0; opacity: .85; }
+  nav button:hover { background: rgba(255,255,255,.12); opacity: 1; }
+  nav button.on { background: var(--bg); color: var(--accent); font-weight: 600; opacity: 1; }
+  main { max-width: 1150px; margin: 0 auto; padding: 20px; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  .bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .bar .grow { flex: 1; }
+  .bar h2 { margin: 0; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .card .k { color: var(--muted); font-size: 13px; }
+  .card .v { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .card.debt .v { color: var(--bad); }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 18px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: start; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tfoot td { font-weight: 600; border-top: 2px solid var(--line); border-bottom: 0; }
+  td.n, th.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .neg { color: var(--bad); font-weight: 600; }
+  .ok { color: var(--good); }
+  .empty { color: var(--muted); text-align: center; padding: 24px; }
+  .tag { display: inline-block; background: var(--accent-soft); color: var(--accent); border-radius: 20px; padding: 0 9px; font-size: 12px; }
+  .small { color: var(--muted); font-size: 13px; }
+  button, input, select { font: inherit; }
+  .btn { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 13px; cursor: pointer; white-space: nowrap; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.1); color: var(--accent-ink); }
+  .btn.danger:hover { border-color: var(--bad); color: var(--bad); }
+  .btn.mini { padding: 2px 9px; font-size: 13px; }
+  input, select { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: #fff; color: var(--ink); min-width: 0; }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  dialog { border: 0; border-radius: 12px; padding: 0; width: min(760px, 94vw); box-shadow: 0 20px 60px rgba(0,0,0,.3); color: var(--ink); }
+  dialog::backdrop { background: rgba(20,30,40,.45); }
+  dialog form, dialog .body { padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  label input, label select { font-size: 15px; }
+  label.chk { flex-direction: row; align-items: center; gap: 8px; align-self: end; padding-bottom: 8px; color: var(--ink); font-size: 15px; }
+  menu { display: flex; gap: 8px; justify-content: flex-start; padding: 0; margin: 16px 0 0; }
+  .err { color: var(--bad); margin: 8px 0 0; min-height: 1em; }
+  .hint { color: var(--muted); margin: 0 0 12px; font-size: 13px; }
+  .lines td { padding: 4px; border: 0; }
+  .lines input, .lines select { width: 100%; }
+  .totals { display: flex; gap: 24px; flex-wrap: wrap; background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; margin-top: 12px; }
+  .totals b { font-size: 18px; font-variant-numeric: tabular-nums; }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 9px 18px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 99; }
+  #toast.show { opacity: 1; }
+  @media print {
+    header, .noprint, .btn { display: none !important; }
+    body { background: #fff; } main { padding: 0; max-width: none; }
+    .panel, .card { border-color: #999; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1 id="title"></h1><button id="lang" data-act="lang"></button></div>
+  <nav id="nav"></nav>
+</header>
+<main id="view"></main>
+<dialog id="dlg"></dialog>
+<div id="toast"></div>
+<input type="file" id="file" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+/* ---------- Languages ---------- */
+const L = {
+  en: {
+    dir: 'ltr', other: 'العربية', appTitle: 'Inventory & Sales', sep: ', ',
+    tabs: { home: 'Home', stock: 'Stock', sales: 'Daily sales', debts: 'Customers & debts', backup: 'Backup' },
+    deletedItem: '(deleted item)', external: 'Walk-in',
+    totalQty: 'Total quantity', soldQty: 'Quantity sold', leftQty: 'Quantity remaining',
+    todaySales: "Today's sales", todayReceived: 'Received today', totalDebts: 'Total debts',
+    todaySalesH: d => `Today's sales (${d})`, newSale: '+ New sale',
+    customer: 'Customer', details: 'Details', total: 'Total', paid: 'Paid', rest: 'Remaining',
+    noSalesToday: 'No sales today', topDebts: 'Largest debts', owes: 'Owes', noDebts: 'No debts',
+    lineDesc: (q, p) => `× ${q} at ${p}`, del: 'Delete',
+    searchPh: 'Search by type, weight or size…', detailed: 'Detailed view',
+    byType: 'Totals by type', byWeight: 'Totals by weight', bySize: 'Totals by size',
+    newItem: '+ New item', type: 'Type', weight: 'Weight', size: 'Size', sold: 'Sold', sumRow: 'Total',
+    noItems: 'No items', noResults: 'No results', noItemsYet: 'No items yet — click “New item”',
+    addQty: 'Add quantity', edit: 'Edit',
+    prevDay: '‹ Previous day', nextDay: 'Next day ›', print: 'Print',
+    salesCount: 'Number of sales', salesTotal: 'Sales total', salesOf: d => `Sales on ${d}`, noSalesDay: 'No sales on this day',
+    custSales: 'Customer sales total', custPaid: 'Total paid', custCount: 'Customers',
+    customers: 'Customers', newCust: '+ New customer', name: 'Name', phone: 'Phone', pay: 'Record payment',
+    statement: 'Statement', noCusts: 'No customers yet', extDebts: 'Walk-in sale debts', date: 'Date',
+    backupH: 'Backup',
+    backupNote: 'Data is stored inside this browser on this device only. Save a backup regularly so you do not lose your data if browser data is cleared or you change devices.',
+    exportBtn: 'Save backup', importBtn: 'Restore from backup',
+    counts: (i, c, s, p) => `Items: ${i} — Customers: ${c} — Sales: ${s} — Payments: ${p}`,
+    save: 'Save', cancel: 'Cancel', confirmDelTitle: 'Confirm delete', addItemsFirst: 'Add items to stock first',
+    newSaleTitle: 'New sale', custName: 'Customer name', custPh: 'Pick a customer or type a new name',
+    extChk: 'Walk-in sale (no customer account)', item: 'Item', qty: 'Quantity', unitPrice: 'Unit price', lineSum: 'Subtotal',
+    addLine: '+ Another item', paidNow: 'Amount paid now', restDebt: 'Remaining (debt)', saveSale: 'Save sale',
+    leftOpt: n => `(left: ${n})`,
+    errNoCust: 'Type the customer name or tick “Walk-in sale”.', errNoLine: 'Add at least one item.',
+    errQty: 'Quantity must be greater than zero.',
+    errOver: (l, n) => `Requested quantity of “${l}” is more than what is left (${n}).`,
+    errPaid: 'Amount paid is more than the total.', saleSaved: 'Sale saved',
+    stTitle: n => `Statement: ${n}`, stText: 'Description', debit: 'Charged', credit: 'Paid', balance: 'Balance',
+    saleEv: 'Sale: ', paidAtSale: 'Paid at time of sale', payEv: 'Payment', noMoves: 'No transactions', close: 'Close',
+    newItemTitle: 'New item', priceOpt: 'Sale price (optional)',
+    errDup: 'This item already exists — use “Add quantity”.', editItemTitle: 'Edit item',
+    addQtyTitle: l => `Add quantity: ${l}`, errQtyBad: 'Enter a valid quantity.',
+    errNeg: 'Remaining quantity cannot go below zero.',
+    addQtyNote: n => `Currently left: ${n}. To correct an entry mistake, use a negative number.`,
+    errItemSold: 'Cannot delete an item that has sales', delItemQ: l => `Delete the item “${l}” and its quantity?`,
+    delSaleQ: 'Delete this sale? The quantity will return to stock.',
+    newCustTitle: 'New customer', errCustDup: 'A customer with this name already exists.',
+    errCustUsed: 'Cannot delete a customer who has sales or payments', delCustQ: n => `Delete the customer “${n}”?`,
+    payTitle: n => `Payment: ${n}`, amount: 'Amount', note: 'Note', errAmount: 'Enter a valid amount.',
+    custRest: n => `Customer still owes: ${n}`, payExtTitle: 'Payment for walk-in sale',
+    errRange: n => `Amount must be between 0 and ${n}.`, restNote: n => `Remaining: ${n}`,
+    delPayQ: 'Delete this payment?', badFile: 'Invalid file', restoreTitle: 'Restore backup',
+    restoreNote: 'All current data will be replaced by the data in the backup. Continue?', restore: 'Restore'
+  },
+  ar: {
+    dir: 'rtl', other: 'English', appTitle: 'إدارة المخزون والمبيعات', sep: '، ',
+    tabs: { home: 'الرئيسية', stock: 'المخزون', sales: 'المبيعات اليومية', debts: 'الزبائن والديون', backup: 'النسخ الاحتياطي' },
+    deletedItem: '(مادة محذوفة)', external: 'خارجي',
+    totalQty: 'الكمية الكلية', soldQty: 'الكمية المباعة', leftQty: 'الكمية الباقية',
+    todaySales: 'مبيعات اليوم', todayReceived: 'المقبوض اليوم', totalDebts: 'الديون الكلية',
+    todaySalesH: d => `مبيعات اليوم (${d})`, newSale: '+ بيع جديد',
+    customer: 'الزبون', details: 'التفاصيل', total: 'الإجمالي', paid: 'المدفوع', rest: 'المتبقي',
+    noSalesToday: 'لا توجد مبيعات اليوم', topDebts: 'أكبر الديون', owes: 'المتبقي عليه', noDebts: 'لا توجد ديون',
+    lineDesc: (q, p) => `× ${q} بسعر ${p}`, del: 'حذف',
+    searchPh: 'بحث حسب النوع أو الوزن أو القياس…', detailed: 'عرض تفصيلي',
+    byType: 'المجموع حسب النوع', byWeight: 'المجموع حسب الوزن', bySize: 'المجموع حسب القياس',
+    newItem: '+ مادة جديدة', type: 'النوع', weight: 'الوزن', size: 'القياس', sold: 'المباع', sumRow: 'المجموع',
+    noItems: 'لا توجد مواد', noResults: 'لا توجد نتائج', noItemsYet: 'لا توجد مواد بعد — اضغط «مادة جديدة»',
+    addQty: 'إضافة كمية', edit: 'تعديل',
+    prevDay: '‹ اليوم السابق', nextDay: 'اليوم التالي ›', print: 'طباعة',
+    salesCount: 'عدد عمليات البيع', salesTotal: 'إجمالي المبيعات', salesOf: d => `مبيعات يوم ${d}`, noSalesDay: 'لا توجد مبيعات في هذا اليوم',
+    custSales: 'إجمالي مبيعات الزبائن', custPaid: 'إجمالي المسدَّد', custCount: 'عدد الزبائن',
+    customers: 'الزبائن', newCust: '+ زبون جديد', name: 'الاسم', phone: 'الهاتف', pay: 'تسديد',
+    statement: 'كشف حساب', noCusts: 'لا يوجد زبائن بعد', extDebts: 'ديون المبيعات الخارجية', date: 'التاريخ',
+    backupH: 'النسخ الاحتياطي',
+    backupNote: 'البيانات محفوظة داخل هذا المتصفح على هذا الجهاز فقط. احفظ نسخة احتياطية بشكل دوري حتى لا تفقد بياناتك عند مسح بيانات المتصفح أو تغيير الجهاز.',
+    exportBtn: 'حفظ نسخة احتياطية', importBtn: 'استرجاع من نسخة',
+    counts: (i, c, s, p) => `المواد: ${i} — الزبائن: ${c} — عمليات البيع: ${s} — التسديدات: ${p}`,
+    save: 'حفظ', cancel: 'إلغاء', confirmDelTitle: 'تأكيد الحذف', addItemsFirst: 'أضف مواد إلى المخزون أولاً',
+    newSaleTitle: 'بيع جديد', custName: 'اسم الزبون', custPh: 'اختر زبوناً أو اكتب اسماً جديداً',
+    extChk: 'بيع خارجي (بدون حساب زبون)', item: 'المادة', qty: 'الكمية', unitPrice: 'سعر الوحدة', lineSum: 'المجموع',
+    addLine: '+ مادة أخرى', paidNow: 'المبلغ المدفوع الآن', restDebt: 'المتبقي (دَين)', saveSale: 'حفظ البيع',
+    leftOpt: n => `(الباقي: ${n})`,
+    errNoCust: 'اكتب اسم الزبون أو اختر «بيع خارجي».', errNoLine: 'أضف مادة واحدة على الأقل.',
+    errQty: 'الكمية يجب أن تكون أكبر من صفر.',
+    errOver: (l, n) => `الكمية المطلوبة من «${l}» أكبر من الباقي (${n}).`,
+    errPaid: 'المبلغ المدفوع أكبر من الإجمالي.', saleSaved: 'تم حفظ البيع',
+    stTitle: n => `كشف حساب: ${n}`, stText: 'البيان', debit: 'عليه', credit: 'سدَّد', balance: 'الرصيد',
+    saleEv: 'بيع: ', paidAtSale: 'دفعة عند البيع', payEv: 'تسديد', noMoves: 'لا توجد حركات', close: 'إغلاق',
+    newItemTitle: 'مادة جديدة', priceOpt: 'سعر البيع (اختياري)',
+    errDup: 'هذه المادة موجودة مسبقاً — استخدم «إضافة كمية».', editItemTitle: 'تعديل المادة',
+    addQtyTitle: l => `إضافة كمية: ${l}`, errQtyBad: 'أدخل كمية صحيحة.',
+    errNeg: 'لا يمكن أن تصبح الكمية الباقية أقل من صفر.',
+    addQtyNote: n => `الباقي حالياً: ${n}. لتصحيح خطأ في الإدخال استخدم رقماً سالباً.`,
+    errItemSold: 'لا يمكن حذف مادة لها مبيعات', delItemQ: l => `حذف المادة «${l}» وكميتها؟`,
+    delSaleQ: 'حذف عملية البيع؟ ستعود الكمية إلى المخزون.',
+    newCustTitle: 'زبون جديد', errCustDup: 'يوجد زبون بهذا الاسم.',
+    errCustUsed: 'لا يمكن حذف زبون له مبيعات أو تسديدات', delCustQ: n => `حذف الزبون «${n}»؟`,
+    payTitle: n => `تسديد: ${n}`, amount: 'المبلغ', note: 'ملاحظة', errAmount: 'أدخل مبلغاً صحيحاً.',
+    custRest: n => `المتبقي على الزبون: ${n}`, payExtTitle: 'تسديد بيع خارجي',
+    errRange: n => `المبلغ يجب أن يكون بين 0 و ${n}.`, restNote: n => `المتبقي: ${n}`,
+    delPayQ: 'حذف هذا التسديد؟', badFile: 'الملف غير صالح', restoreTitle: 'استرجاع نسخة احتياطية',
+    restoreNote: 'سيتم استبدال جميع البيانات الحالية ببيانات النسخة. هل تريد المتابعة؟', restore: 'استرجاع'
+  }
+};
+
+const KEY = 'inventory-app-v1', LANG_KEY = 'inventory-app-lang';
+const $ = s => document.querySelector(s);
+const today = () => new Date().toLocaleDateString('en-CA');
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = n => (Math.round((+n || 0) * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const sum = (arr, f) => arr.reduce((t, x) => t + f(x), 0);
+
+function norm(d) { for (const k of ['items', 'stockIns', 'customers', 'sales', 'payments']) if (!Array.isArray(d[k])) d[k] = []; return d; }
+function load() { try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && typeof d === 'object') return norm(d); } catch (e) {} return norm({}); }
+function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
+
+let db = load();
+const ui = { tab: 'home', saleDate: today(), stockQ: '', stockG: '', lang: localStorage.getItem(LANG_KEY) === 'ar' ? 'ar' : 'en' };
+let T = L[ui.lang];
+
+/* ---------- Calculations ---------- */
+const item = id => db.items.find(i => i.id === id);
+const cust = id => db.customers.find(c => c.id === id);
+const itemLabel = id => { const i = item(id); return i ? [i.type, i.weight, i.size].filter(Boolean).join(' — ') : T.deletedItem; };
+const itemIn = id => sum(db.stockIns.filter(s => s.itemId === id), s => s.qty);
+const itemSold = id => sum(db.sales, s => sum(s.lines.filter(l => l.itemId === id), l => l.qty));
+const itemLeft = id => itemIn(id) - itemSold(id);
+const saleTotal = s => sum(s.lines, l => l.qty * l.price);
+const salePaid = s => s.paid + sum(db.payments.filter(p => p.saleId === s.id), p => p.amount);
+const saleWho = s => s.customerId ? esc(cust(s.customerId)?.name ?? '?') : `${esc(s.externalName)} <span class="tag">${T.external}</span>`;
+function custStats(id) {
+  const sales = db.sales.filter(s => s.customerId === id);
+  const total = sum(sales, saleTotal);
+  const paid = sum(sales, s => s.paid) + sum(db.payments.filter(p => p.customerId === id), p => p.amount);
+  return { total, paid, rest: total - paid };
+}
+const extUnpaid = () => db.sales.filter(s => !s.customerId && saleTotal(s) - salePaid(s) > 0.005);
+const totalDebts = () => sum(db.customers, c => Math.max(0, custStats(c.id).rest)) + sum(extUnpaid(), s => saleTotal(s) - salePaid(s));
+const sortedItems = () => [...db.items].sort((a, b) => itemLabel(a.id).localeCompare(itemLabel(b.id), ui.lang, { numeric: true }));
+
+/* ---------- Views ---------- */
+function render() {
+  document.documentElement.lang = ui.lang;
+  document.documentElement.dir = T.dir;
+  document.title = T.appTitle;
+  $('#title').textContent = T.appTitle;
+  $('#lang').textContent = T.other;
+  $('#nav').innerHTML = Object.entries(T.tabs).map(([k, t]) => `<button data-act="tab" data-tab="${k}" class="${ui.tab === k ? 'on' : ''}">${t}</button>`).join('');
+  $('#view').innerHTML = views[ui.tab]();
+  if (ui.tab === 'stock') drawStock();
+}
+const card = (k, v, cls = '') => `<div class="card ${cls}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+const emptyRow = (cols, msg) => `<tr><td colspan="${cols}" class="empty">${msg}</td></tr>`;
+const salesHead = () => `<thead><tr><th>${T.customer}</th><th>${T.details}</th><th class="n">${T.total}</th><th class="n">${T.paid}</th><th class="n">${T.rest}</th><th></th></tr></thead>`;
+
+function saleRows(list) {
+  return list.map(s => {
+    const t = saleTotal(s), p = salePaid(s), r = t - p;
+    return `<tr><td>${saleWho(s)}</td>
+      <td>${s.lines.map(l => `${esc(itemLabel(l.itemId))} <span class="small">${T.lineDesc(fmt(l.qty), fmt(l.price))}</span>`).join('<br>')}</td>
+      <td class="n">${fmt(t)}</td><td class="n">${fmt(p)}</td>
+      <td class="n ${r > 0.005 ? 'neg' : ''}">${fmt(r)}</td>
+      <td class="noprint"><button class="btn mini danger" data-act="delSale" data-id="${s.id}">${T.del}</button></td></tr>`;
+  }).join('');
+}
+
+const views = {
+  home() {
+    const tin = sum(db.stockIns, s => s.qty), sold = sum(db.sales, s => sum(s.lines, l => l.qty));
+    const d = today(), ts = db.sales.filter(s => s.date === d);
+    const recv = sum(ts, s => s.paid) + sum(db.payments.filter(p => p.date === d), p => p.amount);
+    const debtors = db.customers.map(c => ({ c, r: custStats(c.id).rest })).filter(x => x.r > 0.005).sort((a, b) => b.r - a.r).slice(0, 8);
+    return `<div class="cards">
+        ${card(T.totalQty, fmt(tin))}${card(T.soldQty, fmt(sold))}${card(T.leftQty, fmt(tin - sold))}
+        ${card(T.todaySales, fmt(sum(ts, saleTotal)))}${card(T.todayReceived, fmt(recv))}${card(T.totalDebts, fmt(totalDebts()), 'debt')}
+      </div>
+      <div class="panel"><div class="bar"><h2 class="grow">${T.todaySalesH(d)}</h2><button class="btn primary" data-act="newSale">${T.newSale}</button></div>
+        <table>${salesHead()}<tbody>${saleRows(ts) || emptyRow(6, T.noSalesToday)}</tbody></table></div>
+      <div class="panel"><h2>${T.topDebts}</h2>
+        <table><thead><tr><th>${T.customer}</th><th class="n">${T.owes}</th></tr></thead>
+        <tbody>${debtors.map(x => `<tr><td>${esc(x.c.name)}</td><td class="n neg">${fmt(x.r)}</td></tr>`).join('') || emptyRow(2, T.noDebts)}</tbody></table></div>`;
+  },
+
+  stock() {
+    const g = ui.stockG;
+    return `<div class="bar noprint">
+        <input class="grow" id="stockQ" type="search" placeholder="${T.searchPh}" value="${esc(ui.stockQ)}">
+        <select id="stockG">
+          <option value="">${T.detailed}</option>
+          <option value="type" ${g === 'type' ? 'selected' : ''}>${T.byType}</option>
+          <option value="weight" ${g === 'weight' ? 'selected' : ''}>${T.byWeight}</option>
+          <option value="size" ${g === 'size' ? 'selected' : ''}>${T.bySize}</option>
+        </select>
+        <button class="btn primary" data-act="newItem">${T.newItem}</button>
+      </div>
+      <div class="panel" id="stockTable"></div>`;
+  },
+
+  sales() {
+    const list = db.sales.filter(s => s.date === ui.saleDate);
+    const t = sum(list, saleTotal), p = sum(list, salePaid);
+    return `<div class="bar">
+        <button class="btn noprint" data-act="day" data-d="-1">${T.prevDay}</button>
+        <input type="date" id="saleDate" value="${ui.saleDate}">
+        <button class="btn noprint" data-act="day" data-d="1">${T.nextDay}</button>
+        <span class="grow"></span>
+        <button class="btn" data-act="print">${T.print}</button>
+        <button class="btn primary" data-act="newSale">${T.newSale}</button>
+      </div>
+      <div class="cards">${card(T.salesCount, list.length)}${card(T.salesTotal, fmt(t))}${card(T.paid, fmt(p))}${card(T.rest, fmt(t - p), t - p > 0.005 ? 'debt' : '')}</div>
+      <div class="panel"><h2>${T.salesOf(ui.saleDate)}</h2>
+        <table>${salesHead()}<tbody>${saleRows(list) || emptyRow(6, T.noSalesDay)}</tbody></table></div>`;
+  },
+
+  debts() {
+    const rows = db.customers.map(c => ({ c, s: custStats(c.id) })).sort((a, b) => b.s.rest - a.s.rest);
+    const ext = extUnpaid();
+    return `<div class="cards">
+        ${card(T.totalDebts, fmt(totalDebts()), 'debt')}
+        ${card(T.custSales, fmt(sum(rows, r => r.s.total)))}
+        ${card(T.custPaid, fmt(sum(rows, r => r.s.paid)))}
+        ${card(T.custCount, db.customers.length)}
+      </div>
+      <div class="panel"><div class="bar"><h2 class="grow">${T.customers}</h2><button class="btn primary" data-act="newCust">${T.newCust}</button></div>
+        <table><thead><tr><th>${T.name}</th><th>${T.phone}</th><th class="n">${T.salesTotal}</th><th class="n">${T.paid}</th><th class="n">${T.rest}</th><th></th></tr></thead>
+        <tbody>${rows.map(({ c, s }) => `<tr><td>${esc(c.name)}</td><td class="n">${esc(c.phone)}</td>
+          <td class="n">${fmt(s.total)}</td><td class="n">${fmt(s.paid)}</td>
+          <td class="n ${s.rest > 0.005 ? 'neg' : 'ok'}">${fmt(s.rest)}</td>
+          <td><button class="btn mini primary" data-act="pay" data-id="${c.id}">${T.pay}</button>
+              <button class="btn mini" data-act="statement" data-id="${c.id}">${T.statement}</button>
+              <button class="btn mini danger" data-act="delCust" data-id="${c.id}">${T.del}</button></td></tr>`).join('') || emptyRow(6, T.noCusts)}</tbody></table></div>
+      ${ext.length ? `<div class="panel"><h2>${T.extDebts}</h2>
+        <table><thead><tr><th>${T.date}</th><th>${T.name}</th><th class="n">${T.total}</th><th class="n">${T.paid}</th><th class="n">${T.rest}</th><th></th></tr></thead>
+        <tbody>${ext.map(s => `<tr><td class="n">${s.date}</td><td>${esc(s.externalName || T.external)}</td><td class="n">${fmt(saleTotal(s))}</td><td class="n">${fmt(salePaid(s))}</td>
+          <td class="n neg">${fmt(saleTotal(s) - salePaid(s))}</td>
+          <td><button class="btn mini primary" data-act="payExt" data-id="${s.id}">${T.pay}</button></td></tr>`).join('')}</tbody></table></div>` : ''}`;
+  },
+
+  backup() {
+    return `<div class="panel"><h2>${T.backupH}</h2>
+      <p class="hint">${T.backupNote}</p>
+      <div class="bar"><button class="btn primary" data-act="export">${T.exportBtn}</button>
+      <button class="btn" data-act="import">${T.importBtn}</button></div>
+      <p class="small">${T.counts(db.items.length, db.customers.length, db.sales.length, db.payments.length)}</p></div>`;
+  }
+};
+
+function drawStock() {
+  const q = ui.stockQ.trim().toLowerCase(), g = ui.stockG;
+  const list = sortedItems().filter(i => !q || itemLabel(i.id).toLowerCase().includes(q));
+  const rows = list.map(i => ({ i, tin: itemIn(i.id), sold: itemSold(i.id) }));
+  const foot = `<tfoot><tr><td colspan="${g ? 1 : 3}">${T.sumRow}</td><td class="n">${fmt(sum(rows, r => r.tin))}</td><td class="n">${fmt(sum(rows, r => r.sold))}</td><td class="n">${fmt(sum(rows, r => r.tin - r.sold))}</td>${g ? '' : '<td></td>'}</tr></tfoot>`;
+  const qtyHead = `<th class="n">${T.totalQty}</th><th class="n">${T.sold}</th><th class="n">${T.rest}</th>`;
+  let html;
+  if (g) {
+    const m = new Map();
+    for (const r of rows) { const k = r.i[g] || '—'; const x = m.get(k) || { tin: 0, sold: 0 }; x.tin += r.tin; x.sold += r.sold; m.set(k, x); }
+    html = `<table><thead><tr><th>${T[g]}</th>${qtyHead}</tr></thead>
+      <tbody>${[...m].map(([k, x]) => `<tr><td>${esc(k)}</td><td class="n">${fmt(x.tin)}</td><td class="n">${fmt(x.sold)}</td><td class="n">${fmt(x.tin - x.sold)}</td></tr>`).join('') || emptyRow(4, T.noItems)}</tbody>${foot}</table>`;
+  } else {
+    html = `<table><thead><tr><th>${T.type}</th><th>${T.weight}</th><th>${T.size}</th>${qtyHead}<th></th></tr></thead>
+      <tbody>${rows.map(({ i, tin, sold }) => `<tr><td>${esc(i.type)}</td><td>${esc(i.weight)}</td><td>${esc(i.size)}</td>
+        <td class="n">${fmt(tin)}</td><td class="n">${fmt(sold)}</td><td class="n ${tin - sold <= 0 ? 'neg' : ''}">${fmt(tin - sold)}</td>
+        <td class="noprint"><button class="btn mini" data-act="addStock" data-id="${i.id}">${T.addQty}</button>
+            <button class="btn mini" data-act="editItem" data-id="${i.id}">${T.edit}</button>
+            <button class="btn mini danger" data-act="delItem" data-id="${i.id}">${T.del}</button></td></tr>`).join('') || emptyRow(7, db.items.length ? T.noResults : T.noItemsYet)}</tbody>${foot}</table>`;
+  }
+  $('#stockTable').innerHTML = html;
+}
+
+/* ---------- Dialogs ---------- */
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
+const closeBtns = (ok = T.save) => `<p class="err"></p><menu><button class="btn primary">${ok}</button><button type="button" class="btn" data-act="closeDlg">${T.cancel}</button></menu>`;
+
+function openForm(title, fields, onOk, opts = {}) {
+  const d = $('#dlg');
+  d.innerHTML = `<form><h2>${title}</h2>${opts.note ? `<p class="hint">${opts.note}</p>` : ''}
+    <div class="grid">${fields.map(f => `<label>${f.label}<input name="${f.name}" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" ${f.required ? 'required' : ''} ${f.type === 'number' ? 'step="any"' : ''} ${f.min != null ? `min="${f.min}"` : ''}></label>`).join('')}</div>
+    ${closeBtns(opts.ok)}</form>`;
+  d.querySelector('form').onsubmit = e => {
+    e.preventDefault();
+    const err = onOk(Object.fromEntries(new FormData(e.target)));
+    if (err) { d.querySelector('.err').textContent = err; return; }
+    d.close(); save(); render();
+  };
+  if (!d.open) d.showModal();
+}
+const confirmDel = (msg, fn) => openForm(T.confirmDelTitle, [], () => { fn(); }, { note: msg, ok: T.del });
+
+function saleForm() {
+  if (!db.items.length) return toast(T.addItemsFirst);
+  const items = sortedItems();
+  const opts = items.map(i => `<option value="${i.id}">${esc(itemLabel(i.id))} ${T.leftOpt(fmt(itemLeft(i.id)))}</option>`).join('');
+  const line = () => `<tr><td style="width:46%"><select name="item">${opts}</select></td>
+    <td><input name="qty" type="number" step="any" min="0" placeholder="${T.qty}" required></td>
+    <td><input name="price" type="number" step="any" min="0" placeholder="${T.unitPrice}" required></td>
+    <td class="n lt" style="width:14%">0</td>
+    <td><button type="button" class="btn mini danger" data-act="rmLine">×</button></td></tr>`;
+  const d = $('#dlg');
+  d.innerHTML = `<form><h2>${T.newSaleTitle}</h2>
+    <div class="grid">
+      <label>${T.date}<input type="date" name="date" value="${ui.tab === 'sales' ? ui.saleDate : today()}" required></label>
+      <label>${T.custName}<input name="cust" list="custs" autocomplete="off" placeholder="${T.custPh}"></label>
+      <datalist id="custs">${db.customers.map(c => `<option value="${esc(c.name)}">`).join('')}</datalist>
+      <label class="chk"><input type="checkbox" name="ext"> ${T.extChk}</label>
+    </div>
+    <table class="lines"><thead><tr><th>${T.item}</th><th>${T.qty}</th><th>${T.unitPrice}</th><th>${T.lineSum}</th><th></th></tr></thead><tbody id="lines">${line()}</tbody></table>
+    <button type="button" class="btn mini" data-act="addLine">${T.addLine}</button>
+    <div class="grid" style="margin-top:14px"><label>${T.paidNow}<input name="paid" type="number" step="any" min="0" value="0"></label></div>
+    <div class="totals"><span>${T.total}: <b id="sfT">0</b></span><span>${T.restDebt}: <b id="sfR">0</b></span></div>
+    ${closeBtns(T.saveSale)}</form>`;
+  const f = d.querySelector('form');
+  const setPrice = tr => { const p = item(tr.querySelector('[name=item]').value)?.price; if (p) tr.querySelector('[name=price]').value = p; };
+  const read = () => [...f.querySelectorAll('#lines tr')].map(tr => ({ tr, itemId: tr.querySelector('[name=item]').value, qty: num(tr.querySelector('[name=qty]').value), price: num(tr.querySelector('[name=price]').value) }));
+  const recalc = () => {
+    const ls = read(); ls.forEach(l => l.tr.querySelector('.lt').textContent = fmt(l.qty * l.price));
+    const t = sum(ls, l => l.qty * l.price);
+    $('#sfT').textContent = fmt(t); $('#sfR').textContent = fmt(t - num(f.paid.value));
+  };
+  saleForm.addLine = () => { $('#lines').insertAdjacentHTML('beforeend', line()); setPrice($('#lines').lastElementChild); };
+  saleForm.recalc = recalc;
+  setPrice($('#lines').firstElementChild);
+  f.oninput = recalc;
+  f.onchange = e => { if (e.target.name === 'item') { setPrice(e.target.closest('tr')); recalc(); } };
+  f.onsubmit = e => {
+    e.preventDefault();
+    const fail = m => { f.querySelector('.err').textContent = m; };
+    const ext = f.ext.checked, name = f.cust.value.trim();
+    if (!ext && !name) return fail(T.errNoCust);
+    const ls = read();
+    if (!ls.length) return fail(T.errNoLine);
+    if (ls.some(l => l.qty <= 0)) return fail(T.errQty);
+    const need = {};
+    for (const l of ls) need[l.itemId] = (need[l.itemId] || 0) + l.qty;
+    for (const id in need) if (need[id] > itemLeft(id) + 1e-9) return fail(T.errOver(itemLabel(id), fmt(itemLeft(id))));
+    const total = sum(ls, l => l.qty * l.price), paid = num(f.paid.value);
+    if (paid > total + 1e-9) return fail(T.errPaid);
+    let customerId = null;
+    if (!ext) {
+      let c = db.customers.find(c => c.name === name);
+      if (!c) { c = { id: uid(), name, phone: '' }; db.customers.push(c); }
+      customerId = c.id;
+    }
+    db.sales.push({ id: uid(), date: f.date.value, customerId, externalName: ext ? name : '', paid, lines: ls.map(({ itemId, qty, price }) => ({ itemId, qty, price })) });
+    if (ui.tab === 'sales') ui.saleDate = f.date.value;
+    d.close(); save(); render(); toast(T.saleSaved);
+  };
+  d.showModal();
+}
+
+function statement(id) {
+  const c = cust(id); if (!c) return;
+  const ev = [];
+  db.sales.filter(s => s.customerId === id).forEach(s => {
+    ev.push({ date: s.date, k: 0, text: T.saleEv + s.lines.map(l => `${itemLabel(l.itemId)} × ${fmt(l.qty)}`).join(T.sep), debit: saleTotal(s), credit: 0 });
+    if (s.paid) ev.push({ date: s.date, k: 1, text: T.paidAtSale, debit: 0, credit: s.paid });
+  });
+  db.payments.filter(p => p.customerId === id).forEach(p => ev.push({ date: p.date, k: 2, text: T.payEv + (p.note ? ' — ' + p.note : ''), debit: 0, credit: p.amount, pid: p.id }));
+  ev.sort((a, b) => a.date.localeCompare(b.date) || a.k - b.k);
+  let bal = 0;
+  const s = custStats(id);
+  $('#dlg').innerHTML = `<div class="body"><h2>${T.stTitle(esc(c.name))}</h2>
+    <table><thead><tr><th>${T.date}</th><th>${T.stText}</th><th class="n">${T.debit}</th><th class="n">${T.credit}</th><th class="n">${T.balance}</th><th></th></tr></thead>
+    <tbody>${ev.map(e => { bal += e.debit - e.credit; return `<tr><td class="n">${e.date}</td><td>${esc(e.text)}</td><td class="n">${e.debit ? fmt(e.debit) : ''}</td><td class="n">${e.credit ? fmt(e.credit) : ''}</td><td class="n">${fmt(bal)}</td>
+      <td>${e.pid ? `<button class="btn mini danger noprint" data-act="delPay" data-id="${e.pid}">${T.del}</button>` : ''}</td></tr>`; }).join('') || emptyRow(6, T.noMoves)}</tbody>
+    <tfoot><tr><td colspan="2">${T.sumRow}</td><td class="n">${fmt(s.total)}</td><td class="n">${fmt(s.paid)}</td><td class="n ${s.rest > 0.005 ? 'neg' : ''}">${fmt(s.rest)}</td><td></td></tr></tfoot></table>
+    <menu><button class="btn primary" data-act="pay" data-id="${id}">${T.pay}</button><button class="btn" data-act="closeDlg">${T.close}</button></menu></div>`;
+  if (!$('#dlg').open) $('#dlg').showModal();
+}
+
+/* ---------- Actions ---------- */
+const actions = {
+  tab: d => { ui.tab = d.tab; render(); },
+  lang: () => { ui.lang = ui.lang === 'en' ? 'ar' : 'en'; T = L[ui.lang]; localStorage.setItem(LANG_KEY, ui.lang); render(); },
+  closeDlg: () => $('#dlg').close(),
+  print: () => window.print(),
+  day: d => { const x = new Date(ui.saleDate + 'T12:00'); x.setDate(x.getDate() + +d.d); ui.saleDate = x.toLocaleDateString('en-CA'); render(); },
+  newSale: saleForm,
+  addLine: () => saleForm.addLine(),
+  rmLine: (d, el) => { if ($('#lines').children.length > 1) { el.closest('tr').remove(); saleForm.recalc(); } },
+
+  newItem: () => openForm(T.newItemTitle, [
+    { name: 'type', label: T.type, required: true }, { name: 'weight', label: T.weight }, { name: 'size', label: T.size },
+    { name: 'qty', label: T.qty, type: 'number', min: 0, required: true }, { name: 'price', label: T.priceOpt, type: 'number', min: 0 }
+  ], v => {
+    const type = v.type.trim(), weight = v.weight.trim(), size = v.size.trim();
+    if (db.items.some(i => i.type === type && i.weight === weight && i.size === size)) return T.errDup;
+    const it = { id: uid(), type, weight, size, price: num(v.price) };
+    db.items.push(it);
+    if (num(v.qty) > 0) db.stockIns.push({ id: uid(), itemId: it.id, date: today(), qty: num(v.qty) });
+  }),
+  editItem: d => { const i = item(d.id); openForm(T.editItemTitle, [
+    { name: 'type', label: T.type, required: true, value: i.type }, { name: 'weight', label: T.weight, value: i.weight }, { name: 'size', label: T.size, value: i.size },
+    { name: 'price', label: T.priceOpt, type: 'number', min: 0, value: i.price || '' }
+  ], v => { Object.assign(i, { type: v.type.trim(), weight: v.weight.trim(), size: v.size.trim(), price: num(v.price) }); }); },
+  addStock: d => openForm(T.addQtyTitle(esc(itemLabel(d.id))), [
+    { name: 'qty', label: T.qty, type: 'number', required: true }, { name: 'date', label: T.date, type: 'date', value: today(), required: true }
+  ], v => {
+    const q = num(v.qty);
+    if (!q) return T.errQtyBad;
+    if (itemLeft(d.id) + q < 0) return T.errNeg;
+    db.stockIns.push({ id: uid(), itemId: d.id, date: v.date, qty: q });
+  }, { note: T.addQtyNote(fmt(itemLeft(d.id))) }),
+  delItem: d => {
+    if (itemSold(d.id) > 0) return toast(T.errItemSold);
+    confirmDel(T.delItemQ(esc(itemLabel(d.id))), () => { db.items = db.items.filter(i => i.id !== d.id); db.stockIns = db.stockIns.filter(s => s.itemId !== d.id); });
+  },
+
+  delSale: d => confirmDel(T.delSaleQ, () => { db.sales = db.sales.filter(s => s.id !== d.id); db.payments = db.payments.filter(p => p.saleId !== d.id); }),
+
+  newCust: () => openForm(T.newCustTitle, [{ name: 'name', label: T.name, required: true }, { name: 'phone', label: T.phone }], v => {
+    const name = v.name.trim();
+    if (db.customers.some(c => c.name === name)) return T.errCustDup;
+    db.customers.push({ id: uid(), name, phone: v.phone.trim() });
+  }),
+  delCust: d => {
+    if (db.sales.some(s => s.customerId === d.id) || db.payments.some(p => p.customerId === d.id)) return toast(T.errCustUsed);
+    confirmDel(T.delCustQ(esc(cust(d.id).name)), () => { db.customers = db.customers.filter(c => c.id !== d.id); });
+  },
+  pay: d => { const rest = custStats(d.id).rest; openForm(T.payTitle(esc(cust(d.id).name)), [
+    { name: 'amount', label: T.amount, type: 'number', min: 0, required: true }, { name: 'date', label: T.date, type: 'date', value: today(), required: true }, { name: 'note', label: T.note }
+  ], v => {
+    if (num(v.amount) <= 0) return T.errAmount;
+    db.payments.push({ id: uid(), customerId: d.id, date: v.date, amount: num(v.amount), note: v.note.trim() });
+  }, { note: T.custRest(fmt(rest)) }); },
+  payExt: d => { const s = db.sales.find(s => s.id === d.id), rest = saleTotal(s) - salePaid(s); openForm(T.payExtTitle, [
+    { name: 'amount', label: T.amount, type: 'number', min: 0, required: true, value: rest }, { name: 'date', label: T.date, type: 'date', value: today(), required: true }
+  ], v => {
+    const a = num(v.amount);
+    if (a <= 0 || a > rest + 1e-9) return T.errRange(fmt(rest));
+    db.payments.push({ id: uid(), saleId: s.id, date: v.date, amount: a, note: '' });
+  }, { note: T.restNote(fmt(rest)) }); },
+  delPay: d => confirmDel(T.delPayQ, () => { db.payments = db.payments.filter(p => p.id !== d.id); }),
+  statement: d => statement(d.id),
+
+  export: () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 1)], { type: 'application/json' }));
+    a.download = `inventory-backup-${today()}.json`; a.click(); URL.revokeObjectURL(a.href);
+  },
+  import: () => $('#file').click()
+};
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (el && actions[el.dataset.act]) actions[el.dataset.act](el.dataset, el);
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'stockQ') { ui.stockQ = e.target.value; drawStock(); }
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'stockG') { ui.stockG = e.target.value; drawStock(); }
+  if (e.target.id === 'saleDate' && e.target.value) { ui.saleDate = e.target.value; render(); }
+});
+$('#file').addEventListener('change', e => {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    let d; try { d = JSON.parse(r.result); } catch (x) {}
+    if (!d || !Array.isArray(d.items) || !Array.isArray(d.sales)) return toast(T.badFile);
+    openForm(T.restoreTitle, [], () => { db = norm(d); }, { note: T.restoreNote, ok: T.restore });
+  };
+  r.readAsText(file);
+});
+
+render();
+</script>
+</body>
+</html>
