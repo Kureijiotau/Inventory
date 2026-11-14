@@ -1,0 +1,30 @@
+name: Package app
+
+# On every push to main, rebuild Inventory.zip and publish it as the
+# "latest" release, so the download link in the README always gives
+# the most recently pushed version.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build zip
+        run: zip Inventory.zip index.html
+
+      - name: Publish as latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest Inventory.zip \
+            --target "$GITHUB_SHA" \
+            --title "Latest version" \
+            --notes "Built automatically from commit $GITHUB_SHA."
