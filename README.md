@@ -1,16 +1,36 @@
 # Inventory & Sales
 
-**[⬇ Download the app (Inventory.zip)](https://github.com/Kureijiotau/Inventory/releases/latest/download/Inventory.zip)** — unzip it and open `index.html`. Always the latest version.
+**[⬇ Download Inventory for Windows (InventorySetup.exe)](https://github.com/Kureijiotau/Inventory/releases/latest/download/InventorySetup.exe)** — run it and follow the wizard. Always the latest version.
 
-A single-page, offline inventory and sales tracker in English and Arabic.
+An inventory and sales tracker for Windows 10 and 11, in English and Arabic.
 
 - Stock by type, weight and size, with remaining quantity after sales
 - Daily sales per customer, plus walk-in sales
 - Customer payments, statements and total debts
-- Backup and restore to a JSON file
+- Data saved automatically to `Documents\Inventory`, with a copy kept for each of the last 30 days
+- Tells you when a new version is available and updates with one click
 
 ## Use
 
-Open `index.html` in a browser. No installation or internet connection is needed.
+Run the setup, then open **Inventory** from the desktop or Start menu. It needs Google Chrome or Microsoft Edge on the computer to show its window. No administrator password is needed.
 
-Data is stored in the browser on the device it is used on. Use the Backup tab regularly; backup files are ignored by git because they contain customer data.
+Windows may show a "Windows protected your PC" warning the first time, because the program is not signed with a paid certificate. Choose **More info**, then **Run anyway**.
+
+## Data
+
+Everything is stored on the computer it is used on:
+
+- `Documents\Inventory\data.json` — the live data
+- `Documents\Inventory\backups\` — one copy per day, restorable from the Backup tab
+
+Uninstalling the program never deletes this folder.
+
+## Development
+
+- `index.html` is the whole interface. Opened directly in a browser it still works, storing data in the browser instead of Documents.
+- `host\Program.cs` is the Windows program: it shows `index.html` in a Chrome/Edge app window and reads and writes the data files.
+- `.\build.ps1` builds `dist\Inventory.exe` using the C# compiler that ships with Windows.
+- `installer.iss` is the Inno Setup script for the setup wizard.
+- Every push to `main` builds and publishes a new version through `.github\workflows\package.yml`.
+
+To test without touching real data, set the `INVENTORY_DATA_DIR` environment variable to another folder before starting `Inventory.exe`.

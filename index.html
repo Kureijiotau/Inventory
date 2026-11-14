@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inventory &amp; Sales</title>
+<link rel="icon" href="icon.png">
+<!--HOST-->
 <style>
   :root {
     --bg: #f3f5f7; --card: #fff; --ink: #1c2530; --muted: #66727f; --line: #dde3e9;
@@ -15,6 +17,10 @@
   header { background: var(--accent); color: var(--accent-ink); padding: 12px 20px 0; }
   .top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
   header h1 { margin: 0; font-size: 20px; font-weight: 600; flex: 1; }
+  #logo { height: 38px; border-radius: 6px; display: block; }
+  .notice { display: flex; gap: 12px; align-items: center; justify-content: center; padding: 8px 16px; background: #fff4d6; color: #5c4400; border-bottom: 1px solid #ecd9a0; }
+  .notice.bad { background: var(--bad-soft); color: var(--bad); border-color: #f3c4bf; }
+  code.path { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; direction: ltr; unicode-bidi: embed; }
   #lang { background: rgba(255,255,255,.15); color: inherit; border: 1px solid rgba(255,255,255,.4); border-radius: 8px; padding: 4px 14px; cursor: pointer; }
   #lang:hover { background: rgba(255,255,255,.28); }
   nav { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -77,9 +83,10 @@
 </head>
 <body>
 <header>
-  <div class="top"><h1 id="title"></h1><button id="lang" data-act="lang"></button></div>
+  <div class="top"><img id="logo" src="logo.png" alt=""><h1 id="title"></h1><button id="lang" data-act="lang"></button></div>
   <nav id="nav"></nav>
 </header>
+<div id="bars"></div>
 <main id="view"></main>
 <dialog id="dlg"></dialog>
 <div id="toast"></div>
@@ -112,6 +119,17 @@ const L = {
     backupH: 'Backup',
     backupNote: 'Data is stored inside this browser on this device only. Save a backup regularly so you do not lose your data if browser data is cleared or you change devices.',
     exportBtn: 'Save backup', importBtn: 'Restore from backup',
+    dataLoc: 'Your data is saved automatically to:', openFolder: 'Open data folder', version: v => `Version ${v}`,
+    dailyCopies: 'Automatic daily copies', dailyNote: 'One copy is kept for each day the app was used (the last 30 days). Restoring a copy replaces the current data with the data as it was at the end of that day.',
+    noCopies: 'No copies yet', restoreCopyQ: d => `Replace the current data with the copy from ${d}? The current data is kept as a safety copy in the backups folder.`,
+    restored: 'Data restored', manualH: 'Move data to another computer',
+    manualNote: 'Save a backup file here, then use “Restore from backup” on the other computer.',
+    saveErr: 'Could not save to disk. Your latest changes are not saved yet.', retry: 'Try again',
+    updAvail: v => `A new version (${v}) is available.`, updBtn: 'Update', updating: 'Updating… the app will reopen by itself.',
+    updFail: 'Update failed. Check the internet connection and try again.',
+    blockedNewer: 'This data was saved by a newer version of the app. Please update the app to open it.',
+    blockedCorrupt: 'The data file could not be read. You can restore one of the automatic copies below.',
+    loadErr: 'Could not load the data.',
     counts: (i, c, s, p) => `Items: ${i} — Customers: ${c} — Sales: ${s} — Payments: ${p}`,
     save: 'Save', cancel: 'Cancel', confirmDelTitle: 'Confirm delete', addItemsFirst: 'Add items to stock first',
     newSaleTitle: 'New sale', custName: 'Customer name', custPh: 'Pick a customer or type a new name',
@@ -162,6 +180,17 @@ const L = {
     backupH: 'النسخ الاحتياطي',
     backupNote: 'البيانات محفوظة داخل هذا المتصفح على هذا الجهاز فقط. احفظ نسخة احتياطية بشكل دوري حتى لا تفقد بياناتك عند مسح بيانات المتصفح أو تغيير الجهاز.',
     exportBtn: 'حفظ نسخة احتياطية', importBtn: 'استرجاع من نسخة',
+    dataLoc: 'تُحفظ بياناتك تلقائياً في:', openFolder: 'فتح مجلد البيانات', version: v => `الإصدار ${v}`,
+    dailyCopies: 'النسخ اليومية التلقائية', dailyNote: 'تُحفظ نسخة واحدة عن كل يوم استُخدم فيه البرنامج (آخر 30 يوماً). استرجاع نسخة يستبدل البيانات الحالية بالبيانات كما كانت في نهاية ذلك اليوم.',
+    noCopies: 'لا توجد نسخ بعد', restoreCopyQ: d => `استبدال البيانات الحالية بنسخة يوم ${d}؟ تُحفظ البيانات الحالية كنسخة أمان في مجلد النسخ.`,
+    restored: 'تم استرجاع البيانات', manualH: 'نقل البيانات إلى حاسوب آخر',
+    manualNote: 'احفظ ملف نسخة احتياطية هنا، ثم استخدم «استرجاع من نسخة» على الحاسوب الآخر.',
+    saveErr: 'تعذّر الحفظ على القرص. آخر التغييرات لم تُحفظ بعد.', retry: 'إعادة المحاولة',
+    updAvail: v => `يتوفر إصدار جديد (${v}).`, updBtn: 'تحديث', updating: 'جارٍ التحديث… سيُعاد فتح البرنامج تلقائياً.',
+    updFail: 'فشل التحديث. تحقق من الاتصال بالإنترنت وحاول مرة أخرى.',
+    blockedNewer: 'هذه البيانات حُفظت بإصدار أحدث من البرنامج. يرجى تحديث البرنامج لفتحها.',
+    blockedCorrupt: 'تعذّرت قراءة ملف البيانات. يمكنك استرجاع إحدى النسخ التلقائية أدناه.',
+    loadErr: 'تعذّر تحميل البيانات.',
     counts: (i, c, s, p) => `المواد: ${i} — الزبائن: ${c} — عمليات البيع: ${s} — التسديدات: ${p}`,
     save: 'حفظ', cancel: 'إلغاء', confirmDelTitle: 'تأكيد الحذف', addItemsFirst: 'أضف مواد إلى المخزون أولاً',
     newSaleTitle: 'بيع جديد', custName: 'اسم الزبون', custPh: 'اختر زبوناً أو اكتب اسماً جديداً',
@@ -202,10 +231,34 @@ const sum = (arr, f) => arr.reduce((t, x) => t + f(x), 0);
 
 function norm(d) { for (const k of ['items', 'stockIns', 'customers', 'sales', 'payments']) if (!Array.isArray(d[k])) d[k] = []; return d; }
 function load() { try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && typeof d === 'object') return norm(d); } catch (e) {} return norm({}); }
-function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
 
-let db = load();
-const ui = { tab: 'home', saleDate: today(), stockQ: '', stockG: '', lang: localStorage.getItem(LANG_KEY) === 'ar' ? 'ar' : 'en' };
+/* Inside the Windows program, window.HOST is set and data is saved to the
+   Documents/Inventory folder through the program. In a plain browser, data
+   stays in the browser's own storage. */
+const HOST = window.HOST || null;
+const FORMAT = 1; // data file format; raise it when the shape of the data changes
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { 'X-Token': HOST.token } });
+  if (!r.ok) throw new Error((await r.text()) || r.status);
+  return r;
+}
+let queue = Promise.resolve(); // disk operations run one after another
+function save() {
+  db.format = FORMAT;
+  const json = JSON.stringify(db);
+  if (!HOST) { localStorage.setItem(KEY, json); return; }
+  queue = queue.then(() => api('/api/data', { method: 'PUT', body: json }))
+    .then(() => { if (ui.saveErr) { ui.saveErr = false; drawBars(); } }, () => { ui.saveErr = true; drawBars(); });
+}
+// Accept data read from disk: returns false when this version must not open it.
+function adopt(d) {
+  if (!d || typeof d !== 'object' || (d.format || 1) > FORMAT) return false;
+  db = norm(d);
+  return true;
+}
+
+let db = HOST ? norm({}) : load();
+const ui = { blocked: '', saveErr: false, update: '', updating: false, info: null, copies: [], tab: 'home', saleDate: today(), stockQ: '', stockG: '', lang: localStorage.getItem(LANG_KEY) === 'ar' ? 'ar' : 'en' };
 let T = L[ui.lang];
 
 /* ---------- Calculations ---------- */
@@ -235,9 +288,30 @@ function render() {
   document.title = T.appTitle;
   $('#title').textContent = T.appTitle;
   $('#lang').textContent = T.other;
+  drawBars();
+  if (ui.blocked) {
+    $('#nav').innerHTML = '';
+    $('#view').innerHTML = `<div class="panel"><p class="neg">${T[ui.blocked]}</p></div>${ui.blocked === 'blockedCorrupt' ? copiesPanel() : ''}`;
+    return;
+  }
   $('#nav').innerHTML = Object.entries(T.tabs).map(([k, t]) => `<button data-act="tab" data-tab="${k}" class="${ui.tab === k ? 'on' : ''}">${t}</button>`).join('');
   $('#view').innerHTML = views[ui.tab]();
   if (ui.tab === 'stock') drawStock();
+}
+function drawBars() {
+  $('#bars').innerHTML =
+    (ui.saveErr ? `<div class="notice bad">${T.saveErr} <button class="btn mini" data-act="retrySave">${T.retry}</button></div>` : '') +
+    (ui.updating ? `<div class="notice">${T.updating}</div>`
+      : ui.update ? `<div class="notice">${T.updAvail(esc(ui.update))} <button class="btn mini primary" data-act="update">${T.updBtn}</button></div>` : '');
+}
+const copiesPanel = () => `<div class="panel"><h2>${T.dailyCopies}</h2><p class="hint">${T.dailyNote}</p>
+  <table><tbody>${ui.copies.map(n => { const d = n.slice(5, 15); return `<tr><td class="n">${d}</td><td><button class="btn mini" data-act="restoreCopy" data-name="${n}" data-date="${d}">${T.restore}</button></td></tr>`; }).join('') || emptyRow(2, T.noCopies)}</tbody></table></div>`;
+async function loadHostInfo() {
+  try {
+    ui.info = await (await api('/api/info')).json();
+    ui.copies = await (await api('/api/backups')).json();
+  } catch (e) {}
+  if (ui.blocked || ui.tab === 'backup') render();
 }
 const card = (k, v, cls = '') => `<div class="card ${cls}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
 const emptyRow = (cols, msg) => `<tr><td colspan="${cols}" class="empty">${msg}</td></tr>`;
@@ -327,11 +401,16 @@ const views = {
   },
 
   backup() {
-    return `<div class="panel"><h2>${T.backupH}</h2>
-      <p class="hint">${T.backupNote}</p>
-      <div class="bar"><button class="btn primary" data-act="export">${T.exportBtn}</button>
+    const manual = `<div class="bar"><button class="btn ${HOST ? '' : 'primary'}" data-act="export">${T.exportBtn}</button>
       <button class="btn" data-act="import">${T.importBtn}</button></div>
-      <p class="small">${T.counts(db.items.length, db.customers.length, db.sales.length, db.payments.length)}</p></div>`;
+      <p class="small">${T.counts(db.items.length, db.customers.length, db.sales.length, db.payments.length)}</p>`;
+    if (!HOST) return `<div class="panel"><h2>${T.backupH}</h2><p class="hint">${T.backupNote}</p>${manual}</div>`;
+    return `<div class="panel"><h2>${T.backupH}</h2>
+        <p>${T.dataLoc} <code class="path">${esc(ui.info ? ui.info.dataDir : '…')}</code></p>
+        <div class="bar"><button class="btn primary" data-act="openFolder">${T.openFolder}</button>
+        <span class="small">${T.version(esc(HOST.version))}</span></div></div>
+      ${copiesPanel()}
+      <div class="panel"><h2>${T.manualH}</h2><p class="hint">${T.manualNote}</p>${manual}</div>`;
   }
 };
 
@@ -371,7 +450,7 @@ function openForm(title, fields, onOk, opts = {}) {
     e.preventDefault();
     const err = onOk(Object.fromEntries(new FormData(e.target)));
     if (err) { d.querySelector('.err').textContent = err; return; }
-    d.close(); save(); render();
+    d.close(); if (!opts.noSave) save(); render();
   };
   if (!d.open) d.showModal();
 }
@@ -460,7 +539,24 @@ function statement(id) {
 
 /* ---------- Actions ---------- */
 const actions = {
-  tab: d => { ui.tab = d.tab; render(); },
+  tab: d => { ui.tab = d.tab; render(); if (HOST && d.tab === 'backup') loadHostInfo(); },
+  retrySave: () => save(),
+  openFolder: () => api('/api/open-folder', { method: 'POST' }).catch(() => {}),
+  update: async () => {
+    ui.updating = true; drawBars();
+    try { await queue; await api('/api/update', { method: 'POST' }); }
+    catch (e) { ui.updating = false; drawBars(); toast(T.updFail); }
+  },
+  restoreCopy: d => openForm(T.restoreTitle, [], () => {
+    queue = queue.then(async () => {
+      try {
+        const data = await (await api('/api/restore?name=' + encodeURIComponent(d.name), { method: 'POST' })).json();
+        ui.blocked = adopt(data) ? '' : 'blockedNewer';
+        toast(T.restored);
+      } catch (e) { toast(T.loadErr); }
+      render(); loadHostInfo();
+    });
+  }, { note: T.restoreCopyQ(d.date), ok: T.restore, noSave: true }),
   lang: () => { ui.lang = ui.lang === 'en' ? 'ar' : 'en'; T = L[ui.lang]; localStorage.setItem(LANG_KEY, ui.lang); render(); },
   closeDlg: () => $('#dlg').close(),
   print: () => window.print(),
@@ -549,12 +645,38 @@ $('#file').addEventListener('change', e => {
   r.onload = () => {
     let d; try { d = JSON.parse(r.result); } catch (x) {}
     if (!d || !Array.isArray(d.items) || !Array.isArray(d.sales)) return toast(T.badFile);
-    openForm(T.restoreTitle, [], () => { db = norm(d); }, { note: T.restoreNote, ok: T.restore });
+    if ((d.format || 1) > FORMAT) return toast(T.blockedNewer);
+    openForm(T.restoreTitle, [], () => {
+      if (HOST) queue = queue.then(() => api('/api/snapshot?tag=import', { method: 'POST' })).catch(() => {});
+      db = norm(d);
+    }, { note: T.restoreNote, ok: T.restore });
   };
   r.readAsText(file);
 });
 
-render();
+async function start() {
+  if (HOST) {
+    try {
+      const r = await api('/api/data');
+      if (r.status === 200) {
+        let d = null;
+        try { d = JSON.parse(await r.text()); } catch (e) {}
+        if (!d || typeof d !== 'object') ui.blocked = 'blockedCorrupt';
+        else if (!adopt(d)) ui.blocked = 'blockedNewer';
+        else if ((d.format || 1) < FORMAT) {
+          // Older file: keep a copy, then save it in the current format.
+          await api('/api/snapshot?tag=upgrade', { method: 'POST' });
+          save();
+        }
+      }
+    } catch (e) { $('#view').innerHTML = `<div class="panel"><p class="neg">${T.loadErr}</p></div>`; return; }
+    new EventSource('/api/hold?t=' + HOST.token); // tells the program the window is open
+    api('/api/update').then(r => r.json()).then(u => { if (u.available) { ui.update = u.latest; drawBars(); } }).catch(() => {});
+    if (ui.blocked) loadHostInfo();
+  }
+  render();
+}
+start();
 </script>
 </body>
 </html>
